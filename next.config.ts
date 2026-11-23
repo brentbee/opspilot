@@ -1,9 +1,8 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
-  /* config options here */
-  cacheComponents: true,
-  partialPrefetching: true,
+  // Data here is live and per-request (board, agent runs), so we opt out of
+  // Cache Components and mark API routes `force-dynamic` explicitly.
   turbopack: {
     rules: {
       "*.css": {
