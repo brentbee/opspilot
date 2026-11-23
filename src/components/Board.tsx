@@ -62,7 +62,11 @@ export function Board() {
     // Initial load from the API (an external system), then render.
      
     void load();
-    const reload = () => void load();
+    const reload = () => {
+      setRuns({});
+      setOpenId(null);
+      void load();
+    };
     window.addEventListener(ITEMS_CHANGED, reload);
     return () => window.removeEventListener(ITEMS_CHANGED, reload);
   }, [load]);
@@ -100,18 +104,6 @@ export function Board() {
     },
     [load, upsert],
   );
-
-  async function resetDemo() {
-    if (!confirm("Reset the board to the original demo data? All changes will be lost.")) return;
-    try {
-      await api("/api/demo/reset", { method: "POST" });
-      setRuns({});
-      setOpenId(null);
-      await load();
-    } catch (e) {
-      setError((e as Error).message);
-    }
-  }
 
   async function runAllNew() {
     setBatch(true);
@@ -195,9 +187,6 @@ export function Board() {
           </p>
         </div>
         <div className="ml-auto flex gap-2">
-          <Button variant="ghost" onClick={resetDemo} disabled={batch} title="Restore the original demo data">
-            Reset demo
-          </Button>
           <Button onClick={() => setCreating(true)}>+ New item</Button>
           <Button variant="primary" disabled={batch || newCount === 0} onClick={runAllNew}>
             {batch ? "Processing…" : `Process all New (${newCount})`}

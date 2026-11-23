@@ -8,6 +8,7 @@ export function cx(...c: (string | false | null | undefined)[]) {
 const CATEGORY_STYLE: Record<Category, string> = {
   enquiry: "bg-sky-100 text-sky-800",
   quote_request: "bg-violet-100 text-violet-800",
+  service_request: "bg-amber-100 text-amber-800",
   invoice: "bg-emerald-100 text-emerald-800",
   complaint: "bg-rose-100 text-rose-800",
   other: "bg-slate-200 text-slate-700",

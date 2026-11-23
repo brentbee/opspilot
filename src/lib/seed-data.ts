@@ -66,7 +66,7 @@ export const NEW_ITEMS: SeedItem[] = [
     from_name: "Kate Fisher",
     from_email: "kate@harbourviewbistro.example",
     body: "Hi there, we're a new bistro on the Esplanade and our Rational combi needs its annual service. Do you service that brand, and what's your rate? Cheers, Kate",
-    expect: { category: "enquiry", route: "needs_review" },
+    expect: { category: "enquiry", route: "ready" },
   },
   {
     subject: "Event hire this Saturday",
@@ -115,7 +115,7 @@ export const NEW_ITEMS: SeedItem[] = [
     from_name: "Hannah Lee",
     from_email: "hannah@leesbakehouse.example",
     body: "Hi, the bottom element in our deck oven has stopped heating on the left deck. It's the oven you sold us in 2025, so I think it's still under warranty? We bake from 3am so the sooner the better.\n\nHannah",
-    expect: { category: "enquiry", route: "ready" },
+    expect: { category: "service_request", route: "ready" },
   },
   {
     subject: "hi",

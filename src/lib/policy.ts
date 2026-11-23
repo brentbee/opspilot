@@ -2,6 +2,8 @@ import type { Category, Status } from "./types";
 
 export const CONFIDENCE_THRESHOLD = 0.75;
 export const INVOICE_REVIEW_AMOUNT = 5000;
+/** Categories that may come from someone who isn't a customer yet. */
+export const NEW_CUSTOMER_OK: Category[] = ["enquiry", "quote_request", "service_request"];
 
 export interface RouteInput {
   /** Column the agent asked for (null if it never called move_card). */
@@ -32,7 +34,10 @@ export function decideRoute(input: RouteInput): RouteDecision {
   else if (input.confidence < CONFIDENCE_THRESHOLD)
     reasons.push(`the assistant was only ${Math.round(input.confidence * 100)}% sure of the request type`);
 
-  if (!input.customerFound) reasons.push("the sender isn't an existing customer");
+  // New customers asking questions or for quotes are normal sales leads. Unknown senders
+  // only need a person when money, disputes or unclear requests are involved.
+  if (!input.customerFound && !NEW_CUSTOMER_OK.includes(input.category as Category))
+    reasons.push("the sender isn't an existing customer");
   if (input.category === "complaint") reasons.push("complaints are always checked by staff");
   if (input.category === "invoice" && (input.amount ?? 0) > INVOICE_REVIEW_AMOUNT)
     reasons.push(`the invoice is over $${INVOICE_REVIEW_AMOUNT.toLocaleString("en-AU")}`);

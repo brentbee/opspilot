@@ -20,7 +20,7 @@ create table if not exists items (
   status       text not null default 'new'
                check (status in ('new', 'processing', 'needs_review', 'ready', 'done')),
   position     double precision not null default 0,
-  category     text check (category in ('enquiry', 'quote_request', 'invoice', 'complaint', 'other')),
+  category     text,
   priority     text check (priority in ('low', 'normal', 'high', 'urgent')),
   confidence   real,
   extracted    jsonb,
@@ -33,6 +33,11 @@ create table if not exists items (
   processed_at timestamptz
 );
 create index if not exists items_status_position on items (status, position);
+
+-- Category list as a named constraint, re-created on every setup so new categories migrate cleanly.
+alter table items drop constraint if exists items_category_check;
+alter table items add constraint items_category_check
+  check (category in ('enquiry', 'quote_request', 'service_request', 'invoice', 'complaint', 'other'));
 
 create table if not exists agent_runs (
   id            uuid primary key default gen_random_uuid(),

@@ -9,7 +9,7 @@ export const BOARD_COLUMNS: { status: Status; title: string; hint: string }[] = 
   { status: "done", title: "Done", hint: "Sent / closed by a human" },
 ];
 
-export const CATEGORIES = ["enquiry", "quote_request", "invoice", "complaint", "other"] as const;
+export const CATEGORIES = ["enquiry", "quote_request", "service_request", "invoice", "complaint", "other"] as const;
 export type Category = (typeof CATEGORIES)[number];
 
 export const PRIORITIES = ["low", "normal", "high", "urgent"] as const;

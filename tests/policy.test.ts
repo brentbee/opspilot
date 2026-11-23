@@ -27,13 +27,18 @@ describe("decideRoute (the human checkpoint)", () => {
   });
 
   it.each([
-    ["unknown sender", { customerFound: false }],
+    ["unknown sender with an invoice", { customerFound: false, category: "invoice" as const }],
+    ["unknown sender with an unclear request", { customerFound: false, category: "other" as const }],
     ["complaint", { category: "complaint" as const }],
     ["large invoice", { category: "invoice" as const, amount: 18_940 }],
     ["missing draft", { hasDraft: false }],
     ["missing confidence", { confidence: null }],
   ])("routes %s to review", (_label, patch) => {
     expect(decideRoute({ ...confident, ...patch }).status).toBe("needs_review");
+  });
+
+  it.each(["enquiry", "quote_request", "service_request"] as const)("lets a new customer's %s through", (category) => {
+    expect(decideRoute({ ...confident, customerFound: false, category }).status).toBe("ready");
   });
 
   it("allows small invoices through", () => {
