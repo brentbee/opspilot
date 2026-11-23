@@ -19,7 +19,7 @@ describe("decideRoute (the human checkpoint)", () => {
     const d = decideRoute({ ...confident, confidence: 0.6 });
     expect(d.status).toBe("needs_review");
     expect(d.overridden).toBe(true);
-    expect(d.reasons[0]).toMatch(/confidence 0.60/);
+    expect(d.reasons[0]).toMatch(/only 60% sure/);
   });
 
   it("treats exactly the threshold as confident", () => {

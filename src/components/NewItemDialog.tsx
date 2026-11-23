@@ -66,7 +66,7 @@ export function NewItemDialog({
             Add to New
           </Button>
           <Button type="submit" variant="primary" disabled={busy || !form.subject || !form.body}>
-            Add &amp; run agent
+            Add &amp; process
           </Button>
         </div>
       </form>

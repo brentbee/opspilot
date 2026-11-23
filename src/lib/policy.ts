@@ -28,16 +28,16 @@ export interface RouteDecision {
 export function decideRoute(input: RouteInput): RouteDecision {
   const reasons: string[] = [];
 
-  if (input.confidence == null) reasons.push("no classification confidence");
+  if (input.confidence == null) reasons.push("the request type wasn't worked out");
   else if (input.confidence < CONFIDENCE_THRESHOLD)
-    reasons.push(`confidence ${input.confidence.toFixed(2)} is below ${CONFIDENCE_THRESHOLD}`);
+    reasons.push(`the assistant was only ${Math.round(input.confidence * 100)}% sure of the request type`);
 
-  if (!input.customerFound) reasons.push("sender is not a known customer");
-  if (input.category === "complaint") reasons.push("complaints always go to a human");
+  if (!input.customerFound) reasons.push("the sender isn't an existing customer");
+  if (input.category === "complaint") reasons.push("complaints are always checked by staff");
   if (input.category === "invoice" && (input.amount ?? 0) > INVOICE_REVIEW_AMOUNT)
-    reasons.push(`invoice is over $${INVOICE_REVIEW_AMOUNT.toLocaleString("en-AU")}`);
-  if (!input.hasDraft) reasons.push("no draft reply was written");
-  if (input.requested === "needs_review") reasons.push("the agent asked for a review");
+    reasons.push(`the invoice is over $${INVOICE_REVIEW_AMOUNT.toLocaleString("en-AU")}`);
+  if (!input.hasDraft) reasons.push("no reply was drafted");
+  if (input.requested === "needs_review") reasons.push("the assistant flagged it for a check");
 
   const status = reasons.length === 0 ? "ready" : "needs_review";
   const overridden = input.requested != null && input.requested !== status;

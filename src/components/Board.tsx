@@ -22,6 +22,7 @@ import { BOARD_COLUMNS, type Item, type Status, type Step } from "@/lib/types";
 import { Button, CategoryBadge, Confidence, PriorityTag, cx, timeAgo } from "./ui";
 import { ItemDrawer } from "./ItemDrawer";
 import { NewItemDialog } from "./NewItemDialog";
+import { LABEL } from "./Timeline";
 import { ITEMS_CHANGED } from "./GenerateButton";
 
 export interface LiveRun {
@@ -101,7 +102,7 @@ export function Board() {
   );
 
   async function resetDemo() {
-    if (!confirm("Reset the board to the original demo data? This deletes all items and runs.")) return;
+    if (!confirm("Reset the board to the original demo data? All changes will be lost.")) return;
     try {
       await api("/api/demo/reset", { method: "POST" });
       setRuns({});
@@ -190,7 +191,7 @@ export function Board() {
         <div>
           <h1 className="text-lg font-semibold text-slate-900">Operations inbox</h1>
           <p className="text-sm text-slate-500">
-            The agent processes each item and routes it. Drag cards to override; only a person can move one to Done.
+            The assistant reads each email, drafts a reply and sorts it. Drag a card to move it; only staff can mark one Done.
           </p>
         </div>
         <div className="ml-auto flex gap-2">
@@ -343,7 +344,7 @@ function CardBody({ item, live, lifted }: { item: Item; live?: LiveRun; lifted?:
       {processing ? (
         <p className="mt-2 flex items-center gap-1.5 text-xs text-indigo-700">
           <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-indigo-500" />
-          {lastStep?.tool ? `Agent: ${lastStep.tool.replace("_", " ")}…` : "Agent working…"}
+          {lastStep?.tool ? `${LABEL[lastStep.tool] ?? "Working"}…` : "Assistant working…"}
         </p>
       ) : (
         (item.category || item.confidence != null) && (
@@ -353,7 +354,7 @@ function CardBody({ item, live, lifted }: { item: Item; live?: LiveRun; lifted?:
             {item.agent_ms != null && (
               <span className="ml-auto text-[11px] text-slate-400">
                 {item.last_trigger === "scheduled" && (
-                  <span title="Processed by the scheduled job" className="mr-1">
+                  <span title="Handled by the automatic morning run" className="mr-1">
                     ⏱
                   </span>
                 )}

@@ -39,7 +39,7 @@ export function Confidence({ value }: { value: number | null }) {
   const pct = Math.round(value * 100);
   return (
     <span
-      title="Classification confidence (model self-reported). Ready also requires the review policy to pass."
+      title="How sure the assistant is about the type of request"
       className={cx("text-[11px] tabular-nums", value < 0.75 ? "text-amber-700" : "text-slate-500")}
     >
       {pct}%

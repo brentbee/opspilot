@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type Anthropic from "@anthropic-ai/sdk";
-import { runAgent, type AgentStore } from "@/agent/runAgent";
+import { friendlyError, runAgent, type AgentStore } from "@/agent/runAgent";
 import type { AgentLLM } from "@/agent/llm";
 import type { AgentEvent, Customer, Item, Step } from "@/lib/types";
 
@@ -169,7 +169,7 @@ describe("runAgent", () => {
     const res = await runAgent({ itemId: "i1", llm, store, emit: () => {} });
     expect(res.status).toBe("needs_review");
     expect(state.steps.at(-1)?.payload).toMatchObject({ requested: "ready", final: "needs_review", overridden: true });
-    expect(state.item.route_reason).toMatch(/confidence 0.55/);
+    expect(state.item.route_reason).toMatch(/only 55% sure/);
   });
 
   it("recovers from a bad tool call by returning the error to the model", async () => {
@@ -189,7 +189,8 @@ describe("runAgent", () => {
     const res = await runAgent({ itemId: "i1", llm, store, emit: (e) => events.push(e) });
     expect(res.status).toBe("needs_review");
     expect(state.run?.status).toBe("failed");
-    expect(state.item.route_reason).toMatch(/run failed/);
+    expect(state.item.route_reason).toMatch(/couldn't finish/);
+    expect(state.run?.error).toMatch(/script exhausted/);
     expect(events.some((e) => e.type === "error")).toBe(true);
   });
 
@@ -209,6 +210,15 @@ describe("runAgent", () => {
     let t = 0;
     const res = await runAgent({ itemId: "i1", llm, store, emit: () => {}, now: () => (t += 20_000) });
     expect(res.status).toBe("needs_review");
-    expect(state.steps.some((s) => s.kind === "error" && String(s.payload.message).includes("budget"))).toBe(true);
+    expect(state.steps.some((s) => s.kind === "error" && String(s.payload.message).includes("took too long"))).toBe(true);
   });
+});
+
+describe("friendlyError", () => {
+  it.each([
+    ['429 {"type":"error","error":{"type":"rate_limit_error"}}', /busy/],
+    ["401 invalid x-api-key", /set up correctly/],
+    ["Request timed out.", /didn't respond/],
+    ["weird", /Something went wrong/],
+  ])("maps %s", (detail, expected) => expect(friendlyError(detail)).toMatch(expected));
 });

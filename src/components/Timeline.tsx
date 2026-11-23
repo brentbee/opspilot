@@ -1,13 +1,20 @@
 import type { Step } from "@/lib/types";
 import { cx } from "./ui";
 
-const LABEL: Record<string, string> = {
-  extract_fields: "Extract fields",
-  classify: "Classify",
-  lookup_customer: "Look up customer",
-  draft_reply: "Draft reply",
-  move_card: "Request column",
-  policy: "Review policy",
+const COLUMN: Record<string, string> = {
+  new: "New",
+  needs_review: "Needs review",
+  ready: "Ready to send",
+  done: "Done",
+};
+
+export const LABEL: Record<string, string> = {
+  extract_fields: "Read the email",
+  classify: "Work out the request type",
+  lookup_customer: "Find the customer",
+  draft_reply: "Write a reply",
+  move_card: "Suggest where it goes",
+  policy: "Final check",
 };
 
 function summary(step: Step): string {
@@ -17,31 +24,32 @@ function summary(step: Step): string {
       return String(p.text ?? "");
     case "tool_call": {
       const input = (p.input ?? {}) as Record<string, unknown>;
-      if (step.tool === "classify") return `${input.category} · ${input.priority} · ${input.confidence}: ${input.rationale ?? ""}`;
-      if (step.tool === "lookup_customer") return Object.values(input).filter(Boolean).join(" / ");
-      if (step.tool === "move_card") return `${input.status}: ${input.reason ?? ""}`;
-      if (step.tool === "draft_reply") return `${input.tone}; ${(input.key_points as string[] | undefined)?.length ?? 0} key points`;
+      if (step.tool === "classify")
+        return `${String(input.category).replace("_", " ")}, ${input.priority} priority, ${Math.round(Number(input.confidence) * 100)}% sure. ${input.rationale ?? ""}`;
+      if (step.tool === "lookup_customer") return `Searching for ${Object.values(input).filter(Boolean).join(" / ")}`;
+      if (step.tool === "move_card") return `${COLUMN[String(input.status)] ?? input.status}: ${input.reason ?? ""}`;
+      if (step.tool === "draft_reply") return `A ${input.tone} reply covering ${(input.key_points as string[] | undefined)?.length ?? 0} points`;
       if (step.tool === "extract_fields") return String(input.summary ?? "");
-      return JSON.stringify(input);
+      return "";
     }
     case "tool_result": {
-      if (p.is_error) return `Error: ${String(p.error ?? "")}`;
+      if (p.is_error) return "Hit a problem with this step and tried again";
       if (step.tool === "lookup_customer") {
         const c = p.customer as { name?: string; company?: string; tier?: string } | undefined;
-        return p.found ? `Found ${c?.name} (${c?.company}), ${c?.tier} tier` : "No matching customer";
+        return p.found ? `Found ${c?.name} (${c?.company}), ${c?.tier} customer` : "Not an existing customer";
       }
-      return "ok";
+      return "Done";
     }
     case "draft":
-      return `${String(p.text ?? "").length} characters written`;
+      return "Reply written";
     case "route": {
       const reasons = (p.reasons as string[]) ?? [];
-      return `${p.final === "ready" ? "Ready to send" : "Needs review"}${p.overridden ? " (policy overrode the agent)" : ""}${
+      return `${p.final === "ready" ? "Ready to send" : "Needs review"}${p.overridden ? " (the final check changed the assistant's suggestion)" : ""}${
         reasons.length ? `: ${reasons.join("; ")}` : ""
       }`;
     }
     case "human_override":
-      return `A person moved this card from ${p.from} to ${p.to}`;
+      return `Moved by staff from ${COLUMN[String(p.from)] ?? p.from} to ${COLUMN[String(p.to)] ?? p.to}`;
     case "error":
       return String(p.message ?? "");
   }
@@ -60,7 +68,7 @@ const DOT: Record<Step["kind"], string> = {
 export function Timeline({ steps, running }: { steps: Step[]; running: boolean }) {
   // Tool results are folded into their call to keep the timeline readable.
   const visible = steps.filter((s) => s.kind !== "tool_result" || (s.payload as { is_error?: boolean }).is_error || s.tool === "lookup_customer");
-  if (!visible.length && !running) return <p className="text-sm text-slate-500">Not processed yet. Run the agent to see each step live.</p>;
+  if (!visible.length && !running) return <p className="text-sm text-slate-500">Not processed yet. Press Process to watch the assistant work through it.</p>;
   return (
     <ol className="relative space-y-2 border-l border-slate-200 pl-4">
       {visible.map((s, i) => (
@@ -68,11 +76,11 @@ export function Timeline({ steps, running }: { steps: Step[]; running: boolean }
           <span className={cx("absolute -left-[21px] top-1.5 h-2.5 w-2.5 rounded-full ring-2 ring-white", DOT[s.kind])} />
           <p className="text-xs font-medium text-slate-500">
             {s.kind === "thought"
-              ? "Agent"
+              ? "Assistant"
               : s.kind === "human_override"
-                ? "Human override"
+                ? "Staff change"
                 : s.kind === "tool_result"
-                  ? `${LABEL[s.tool ?? ""] ?? s.tool} → result`
+                  ? `${LABEL[s.tool ?? ""] ?? s.tool}: result`
                   : s.kind === "error"
                     ? "Error"
                     : (LABEL[s.tool ?? ""] ?? s.tool)}

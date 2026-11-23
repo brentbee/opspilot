@@ -7,6 +7,18 @@ import type { LiveRun } from "./Board";
 import { Timeline } from "./Timeline";
 import { Button, CategoryBadge, Confidence, Field, PriorityTag, inputClass } from "./ui";
 
+const DETAIL_LABEL: Record<string, string> = {
+  sender_name: "From",
+  sender_email: "Email",
+  company: "Business",
+  amount: "Amount",
+  currency: "Currency",
+  due_date: "Due date",
+  reference: "Reference",
+  requested_items: "Asking about",
+  summary: "Summary",
+};
+
 export function ItemDrawer({
   item,
   live,
@@ -74,7 +86,7 @@ export function ItemDrawer({
   }
 
   async function remove() {
-    if (!confirm("Delete this item and its agent history?")) return;
+    if (!confirm("Delete this item?")) return;
     setBusy(true);
     try {
       await api(`/api/items/${item.id}`, { method: "DELETE" });
@@ -110,7 +122,7 @@ export function ItemDrawer({
             </div>
           </div>
           <Button variant="primary" onClick={onRun} disabled={running || item.status === "done"}>
-            {running ? "Running…" : item.processed_at ? "Re-run agent" : "Run agent"}
+            {running ? "Working…" : item.processed_at ? "Process again" : "Process"}
           </Button>
           <Button variant="ghost" onClick={onClose} aria-label="Close">
             ✕
@@ -119,7 +131,7 @@ export function ItemDrawer({
 
         <div className="space-y-5 px-5 py-4">
           {error && <p className="rounded bg-rose-50 px-3 py-2 text-sm text-rose-800">{error}</p>}
-          {live?.error && <p className="rounded bg-rose-50 px-3 py-2 text-sm text-rose-800">Agent error: {live.error}</p>}
+          {live?.error && <p className="rounded bg-rose-50 px-3 py-2 text-sm text-rose-800">The assistant couldn&apos;t finish: {live.error}</p>}
 
           {item.route_reason && !running && (
             <p
@@ -134,11 +146,11 @@ export function ItemDrawer({
           )}
 
           <section>
-            <h3 className="mb-2 text-sm font-semibold text-slate-800">Agent steps</h3>
+            <h3 className="mb-2 text-sm font-semibold text-slate-800">What the assistant did</h3>
             {run && !running && run.model !== "seed" && (
               <p className="mb-2 text-xs text-slate-500">
-                Last run: {run.trigger === "scheduled" ? "⏱ scheduled job" : "manual"} · {run.model} ·{" "}
-                {(run.input_tokens + run.output_tokens).toLocaleString()} tokens · {run.status}
+                {run.trigger === "scheduled" ? "⏱ Handled by the automatic morning run" : "Processed on request"}
+                {run.status === "failed" && " (didn't finish)"}
               </p>
             )}
             <Timeline steps={steps} running={running} />
@@ -174,11 +186,11 @@ export function ItemDrawer({
 
           {ex && (
             <section>
-              <h3 className="mb-2 text-sm font-semibold text-slate-800">Extracted fields</h3>
+              <h3 className="mb-2 text-sm font-semibold text-slate-800">Key details</h3>
               <dl className="grid grid-cols-[max-content_1fr] gap-x-4 gap-y-1 text-sm">
                 {Object.entries(ex).map(([k, v]) => (
                   <div key={k} className="contents">
-                    <dt className="text-slate-500">{k.replace(/_/g, " ")}</dt>
+                    <dt className="text-slate-500">{DETAIL_LABEL[k] ?? k.replace(/_/g, " ")}</dt>
                     <dd className="text-slate-900">{Array.isArray(v) ? v.join(", ") : String(v)}</dd>
                   </div>
                 ))}
@@ -188,7 +200,7 @@ export function ItemDrawer({
 
           <section>
             <div className="mb-2 flex items-center justify-between">
-              <h3 className="text-sm font-semibold text-slate-800">Original item</h3>
+              <h3 className="text-sm font-semibold text-slate-800">Original email</h3>
               {!editing && !running && (
                 <Button variant="ghost" onClick={() => setEditing(true)}>
                   Edit

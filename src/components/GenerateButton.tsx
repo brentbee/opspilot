@@ -34,8 +34,8 @@ export function GenerateButton() {
     <div className="ml-auto flex items-center gap-3">
       {note && <span className="text-xs text-slate-500">{note}</span>}
       <span className="hidden text-xs text-slate-400 sm:inline">Demo · synthetic data</span>
-      <Button onClick={generate} disabled={busy} title="Claude writes 10 new, fictional inbox emails">
-        {busy ? "Writing emails…" : "✨ Generate 10 emails"}
+      <Button onClick={generate} disabled={busy} title="Adds 10 made-up sample emails for trying things out">
+        {busy ? "Creating emails…" : "✨ Add 10 sample emails"}
       </Button>
     </div>
   );

@@ -27,11 +27,11 @@ Every step streams to the screen as it happens. Anything uncertain or risky land
 | **Analytics dashboard** | KPIs (items processed, % auto-routed, average agent time, human overrides) and 2 charts (by category, per day) computed in SQL from live rows | `lib/stats.ts`, `/dashboard` |
 
 ### Try it
-1. On the board, open **"Quote for a second combi oven"** and press **Run agent**. Watch the steps and the reply stream in. It should land in *Ready to send*.
+1. On the board, open **"Quote for a second combi oven"** and press **Process**. Watch the steps and the reply stream in. It should land in *Ready to send*.
 2. Run **"URGENT: update our payment details"**. It's a prompt-injection / payment-fraud attempt, and should land in *Needs review* with the reason shown.
 3. Drag a card between columns, then reload: the move is saved and logged as a human override.
-4. **+ New item** → paste anything → **Add & run agent**.
-   Or press **✨ Generate 10 emails** (top right). Claude writes a fresh batch of fictional emails. Code picks the scenario mix (complaints, large invoices, fraud attempts, vague one-liners, mixed requests) and the senders, so each batch exercises different agent paths. Then press **Process all New**.
+4. **+ New item** → paste anything → **Add & process**.
+   Or press **✨ Add 10 sample emails** (top right). Claude writes a fresh batch of fictional emails. Code picks the scenario mix (complaints, large invoices, fraud attempts, vague one-liners, mixed requests) and the senders, so each batch exercises different agent paths. Then press **Process all New**.
 5. **Reset demo** (board header) restores the original data at any time.
 6. Check **Dashboard** and **Customers**. Edit a customer's notes and the agent's next reply uses them.
 

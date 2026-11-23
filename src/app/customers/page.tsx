@@ -67,7 +67,6 @@ export default function CustomersPage() {
       <div className="mb-4 flex items-center">
         <div>
           <h1 className="text-lg font-semibold">Customers</h1>
-          <p className="text-sm text-slate-500">The agent&apos;s lookup_customer tool searches this table.</p>
         </div>
         <Button className="ml-auto" variant="primary" onClick={() => setEditing({ id: null, form: EMPTY })}>
           + New customer
@@ -154,7 +153,7 @@ export default function CustomersPage() {
                 <option value="priority">priority</option>
               </select>
             </Field>
-            <Field label="Notes (the agent reads these)">
+            <Field label="Notes">
               <textarea
                 className={inputClass}
                 value={editing.form.notes}

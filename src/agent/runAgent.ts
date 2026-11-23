@@ -79,7 +79,7 @@ export async function runAgent(opts: RunOptions): Promise<RunResult> {
 
     for (let turn = 0; turn < MAX_TURNS; turn++) {
       if (now() - started > RUN_BUDGET_MS) {
-        await step("error", null, { message: "Run budget exceeded; stopping early" });
+        await step("error", null, { message: "This one took too long, so it was left for staff to check." });
         break;
       }
 
@@ -112,10 +112,12 @@ export async function runAgent(opts: RunOptions): Promise<RunResult> {
 
     return await finalise(false);
   } catch (err) {
-    const message = err instanceof Error ? err.message : String(err);
+    const detail = err instanceof Error ? err.message : String(err);
+    // Staff see a plain message; the technical detail is kept on the run record.
+    const message = friendlyError(detail);
     await step("error", null, { message });
     emit({ type: "error", message });
-    return await finalise(true, message);
+    return await finalise(true, detail);
   }
 
   async function finalise(failed: boolean, error?: string): Promise<RunResult> {
@@ -127,7 +129,7 @@ export async function runAgent(opts: RunOptions): Promise<RunResult> {
       amount: state.extracted?.amount,
       hasDraft: Boolean(state.draft),
     });
-    if (failed) decision.reasons.unshift("the agent run failed");
+    if (failed) decision.reasons.unshift("the assistant couldn't finish");
     const status: Status = failed ? "needs_review" : decision.status;
     const reason = decision.reasons.length
       ? `Needs review: ${decision.reasons.join("; ")}.`
@@ -163,6 +165,14 @@ export async function runAgent(opts: RunOptions): Promise<RunResult> {
     emit({ type: "done", status, ms });
     return { status, ms, runId };
   }
+}
+
+/** Turns API and network failures into a sentence a non-technical user can act on. */
+export function friendlyError(detail: string): string {
+  if (/\b(429|529)\b|overloaded|rate.?limit/i.test(detail)) return "The AI service is busy right now. Try again in a minute.";
+  if (/\b(401|403)\b|api.?key|authentication/i.test(detail)) return "The AI service isn't set up correctly. Ask your administrator.";
+  if (/timeout|timed out|ETIMEDOUT|ECONNRESET|fetch failed|network/i.test(detail)) return "The AI service didn't respond in time. Try again.";
+  return "Something went wrong while processing this item. Try again, or handle it manually.";
 }
 
 export type { Step };
