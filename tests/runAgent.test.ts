@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import type Anthropic from "@anthropic-ai/sdk";
 import { friendlyError, runAgent, type AgentStore } from "@/agent/runAgent";
 import type { AgentLLM } from "@/agent/llm";
+import { DEFAULT_BUSINESS } from "@/lib/business";
 import type { AgentEvent, Customer, Item, Step } from "@/lib/types";
 
 /* ----------------------------- test doubles ----------------------------- */
@@ -57,6 +58,7 @@ function memoryStore(item: Partial<Item> = {}) {
       return saved;
     },
     findCustomer: async (q) => (q.email === CUSTOMER.email ? CUSTOMER : null),
+    getBusiness: async () => DEFAULT_BUSINESS,
   };
   return { store, state };
 }

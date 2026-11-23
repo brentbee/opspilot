@@ -136,7 +136,7 @@ export function ItemDrawer({
           {item.route_reason && !running && (
             <p
               className={
-                item.status === "needs_review"
+                item.route_reason.startsWith("Needs review")
                   ? "rounded border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-900"
                   : "rounded border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm text-emerald-900"
               }

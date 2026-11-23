@@ -125,32 +125,3 @@ export const NEW_ITEMS: SeedItem[] = [
     expect: { category: "other", route: "needs_review" },
   },
 ];
-
-/** Already-handled items, spread over the last two weeks, so the dashboard has history. */
-export const HISTORY: {
-  subject: string;
-  customerEmail: string | null;
-  category: "enquiry" | "quote_request" | "invoice" | "complaint" | "other";
-  priority: "low" | "normal" | "high" | "urgent";
-  confidence: number;
-  finalRoute: "ready" | "needs_review";
-  daysAgo: number;
-  agentMs: number;
-}[] = [
-  { subject: "Quote: 3 x stainless benches", customerEmail: "aisha@saffronsumac.example", category: "quote_request", priority: "normal", confidence: 0.93, finalRoute: "ready", daysAgo: 13, agentMs: 14200 },
-  { subject: "Invoice 7702 query", customerEmail: "accounts@phoreal.example", category: "invoice", priority: "normal", confidence: 0.9, finalRoute: "ready", daysAgo: 12, agentMs: 11800 },
-  { subject: "Fryer thermostat fault", customerEmail: "ben@cartersburgers.example", category: "enquiry", priority: "high", confidence: 0.86, finalRoute: "ready", daysAgo: 12, agentMs: 12900 },
-  { subject: "Late delivery complaint", customerEmail: "jack@murphyspub.example", category: "complaint", priority: "high", confidence: 0.95, finalRoute: "needs_review", daysAgo: 11, agentMs: 13500 },
-  { subject: "Do you sell coffee machines?", customerEmail: null, category: "enquiry", priority: "low", confidence: 0.88, finalRoute: "needs_review", daysAgo: 10, agentMs: 10100 },
-  { subject: "Hire: chafing dishes for gala", customerEmail: "sophie@greenleafcatering.example", category: "quote_request", priority: "high", confidence: 0.91, finalRoute: "ready", daysAgo: 9, agentMs: 15800 },
-  { subject: "Invoice 7741 - range hood", customerEmail: "procurement@stclair.example", category: "invoice", priority: "normal", confidence: 0.94, finalRoute: "needs_review", daysAgo: 9, agentMs: 12400 },
-  { subject: "Service booking - walk-in cool room", customerEmail: "daniel@seoulfood.example", category: "enquiry", priority: "normal", confidence: 0.82, finalRoute: "ready", daysAgo: 8, agentMs: 11200 },
-  { subject: "Quote for display fridge", customerEmail: "chloe@petitfour.example", category: "quote_request", priority: "normal", confidence: 0.92, finalRoute: "ready", daysAgo: 7, agentMs: 13100 },
-  { subject: "Mixed request, oven + invoice", customerEmail: "luca@trattoriarossi.example", category: "quote_request", priority: "normal", confidence: 0.61, finalRoute: "needs_review", daysAgo: 6, agentMs: 16700 },
-  { subject: "Ice machine leaking", customerEmail: "mia@bluegumcafe.example", category: "enquiry", priority: "urgent", confidence: 0.89, finalRoute: "ready", daysAgo: 5, agentMs: 12000 },
-  { subject: "Overcharged on call-out", customerEmail: "tom@saltyanchor.example", category: "complaint", priority: "high", confidence: 0.9, finalRoute: "needs_review", daysAgo: 4, agentMs: 14800 },
-  { subject: "Quote: bain-marie for canteen", customerEmail: "canteen@riversideschool.example", category: "quote_request", priority: "low", confidence: 0.87, finalRoute: "ready", daysAgo: 3, agentMs: 11900 },
-  { subject: "Remittance advice INV-20870", customerEmail: "accounts@phoreal.example", category: "invoice", priority: "low", confidence: 0.96, finalRoute: "ready", daysAgo: 2, agentMs: 9800 },
-  { subject: "Spam: SEO services", customerEmail: null, category: "other", priority: "low", confidence: 0.97, finalRoute: "needs_review", daysAgo: 1, agentMs: 8200 },
-  { subject: "Blender warranty question", customerEmail: "ella@freshfuel.example", category: "enquiry", priority: "normal", confidence: 0.84, finalRoute: "ready", daysAgo: 1, agentMs: 10700 },
-];

@@ -25,6 +25,9 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
           <Link href="/dashboard" className="text-sm text-slate-600 hover:text-slate-900">
             Dashboard
           </Link>
+          <Link href="/business" className="text-sm text-slate-600 hover:text-slate-900">
+            Business details
+          </Link>
           <GenerateButton />
         </nav>
         {children}

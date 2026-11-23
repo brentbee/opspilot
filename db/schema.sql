@@ -53,6 +53,13 @@ create table if not exists agent_runs (
 );
 create index if not exists agent_runs_item on agent_runs (item_id, started_at desc);
 
+-- Editable app settings (e.g. the business profile), stored as JSON.
+create table if not exists settings (
+  key        text primary key,
+  value      jsonb not null,
+  updated_at timestamptz not null default now()
+);
+
 -- Every visible step of a run, plus human overrides (run_id null, item_id set).
 create table if not exists agent_steps (
   id         bigint generated always as identity primary key,
@@ -73,3 +80,4 @@ alter table customers   enable row level security;
 alter table items       enable row level security;
 alter table agent_runs  enable row level security;
 alter table agent_steps enable row level security;
+alter table settings    enable row level security;

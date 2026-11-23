@@ -62,6 +62,9 @@ export function Board() {
     // Initial load from the API (an external system), then render.
      
     void load();
+    // Deep link from the Customers page: /?item=<id> opens that item.
+    const linked = new URLSearchParams(window.location.search).get("item");
+    if (linked) setOpenId(linked);
     const reload = () => {
       setRuns({});
       setOpenId(null);

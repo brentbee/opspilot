@@ -10,6 +10,7 @@ import { anthropicLLM } from "../src/agent/llm";
 import { runAgent, type AgentStore } from "../src/agent/runAgent";
 import type { Customer, Item, Step } from "../src/lib/types";
 import { CUSTOMERS, NEW_ITEMS } from "../src/lib/seed-data";
+import { DEFAULT_BUSINESS } from "../src/lib/business";
 
 const customers: Customer[] = CUSTOMERS.map((c, i) => ({ ...c, id: `c${i}`, created_at: "" }));
 
@@ -23,6 +24,7 @@ function memoryStore(item: Item): AgentStore & { steps: Step[] } {
     startRun: async () => "eval",
     finishRun: async () => {},
     insertStep: async (s) => (steps.push(s), s),
+    getBusiness: async () => DEFAULT_BUSINESS,
     findCustomer: async (q) =>
       customers.find((c) => q.email && c.email === q.email.toLowerCase()) ??
       customers.find((c) =>

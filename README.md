@@ -23,7 +23,7 @@ Every step streams to the screen as it happens. Anything uncertain or risky land
 | **AI agents** (goal, tools, multi-step, visible) | A Claude tool-use loop with 5 tools. Each model thought, tool call and result is saved and shown live in the item's timeline | `src/agent/` |
 | **Streaming / scheduled** | Steps and the reply text stream token by token over Server-Sent Events. A Vercel cron job processes the New column on a schedule | `api/items/[id]/run`, `api/cron/process` |
 | **Saved drag and drop** | Kanban board (dnd-kit). Column and order are saved with fractional positions, one row update per move, with an optimistic UI that rolls back on error | `components/Board.tsx`, `lib/ordering.ts` |
-| **CRUD** | Create, edit and delete items (including editing the AI draft) and customers | `api/items`, `api/customers`, `/customers` |
+| **CRUD** | Create, edit and delete items (including editing the AI draft) and customers. Each customer's emails are listed on the Customers page. The business profile (hours, service area, brands, policies) is editable, and the assistant reads it on every run | `api/items`, `api/customers`, `/customers` |
 | **Analytics dashboard** | KPIs (items processed, % auto-routed, average agent time, human overrides) and 2 charts (by category, per day) computed in SQL from live rows | `lib/stats.ts`, `/dashboard` |
 
 ### Try it
@@ -90,9 +90,17 @@ This project was built AI-first, with a human directing and checking the work:
 | Email ingestion | **Not built.** Items are created in the UI or seeded. Next step: a Gmail/Outlook webhook that calls `createItem` |
 | Sending replies | **Not built.** "Approve & mark sent" records the decision but sends nothing |
 | Auth / multi-tenant | **Not built.** Single-tenant demo, no login |
-| Dashboard history | 16 historical items are **seeded** so the charts have shape; new runs add real rows |
+| Dashboard history | The Done column is seeded from **28 real agent runs**, captured with `scripts/capture-history.ts`: genuine model steps and drafts, with dates spread over two weeks. New runs add live rows |
 | "Time saved" figure | An **estimate** (6 min per item), labelled as such |
 | Scheduled processing | Built. A Vercel cron job runs once a day (the Hobby plan limit) and processes up to 3 New items. Scheduled runs show a ⏱ on the card and in the timeline, and the last run time is on the dashboard. "Process all New" runs a batch on demand |
+
+### Tuning the human checkpoint (an example of the loop)
+The first live batch sent only **4 of 31** emails to Ready. Reading the routing reasons showed three causes:
+- the assistant lacked basic business facts, so it played safe;
+- there was no category for service work, so bookings and warranty claims scored low;
+- the unknown-sender rule blocked ordinary new-customer enquiries.
+
+The fixes were an editable business profile fed into the prompt, a `service_request` category, and letting new senders through for enquiries, quotes and service requests only. After the fixes, **18 of 42** went to Ready. What still goes to review is what *should*: bank-detail changes, complaints, invoices over $5k, vague or mixed requests, and payments from unknown senders. Safety rules such as "bank details never change by email" are hard-coded, so editing the profile can't remove them.
 
 ## 5. Trade-offs and what I'd do next
 - **Calibrate confidence.** The model's self-reported confidence is a weak signal. Next: grow the labelled eval set, run `npm run eval` in CI on prompt or model changes, and tune the threshold against the unsafe-route rate.

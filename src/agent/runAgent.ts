@@ -3,7 +3,7 @@ import { decideRoute } from "@/lib/policy";
 import type { AgentEvent, Item, Status, Step, StepKind } from "@/lib/types";
 import type * as repo from "@/lib/repo";
 import type { AgentLLM } from "./llm";
-import { SYSTEM_PROMPT, WRITER_SYSTEM, itemPrompt, writerPrompt } from "./prompt";
+import { itemPrompt, systemPrompt, writerPrompt, writerSystem } from "./prompt";
 import { anthropicTools, emptyState, runTool, type RunState, type ToolDeps } from "./tools";
 
 export const MAX_TURNS = 8;
@@ -12,7 +12,7 @@ export const RUN_BUDGET_MS = 50_000;
 /** The persistence the agent needs; the real implementation is lib/repo. */
 export type AgentStore = Pick<
   typeof repo,
-  "getItem" | "updateItem" | "moveToBottom" | "startRun" | "finishRun" | "insertStep" | "findCustomer"
+  "getItem" | "updateItem" | "moveToBottom" | "startRun" | "finishRun" | "insertStep" | "findCustomer" | "getBusiness"
 >;
 
 export interface RunOptions {
@@ -46,6 +46,7 @@ export async function runAgent(opts: RunOptions): Promise<RunResult> {
     return { status: "new", ms: 0, runId: null };
   }
 
+  const business = await store.getBusiness();
   await store.updateItem(itemId, { status: "processing" });
   const runId = await store.startRun(itemId, llm.model, opts.trigger ?? "manual");
   emit({ type: "run", runId, model: llm.model });
@@ -63,7 +64,7 @@ export async function runAgent(opts: RunOptions): Promise<RunResult> {
     findCustomer: (q) => store.findCustomer(q),
     async writeDraft(args, s) {
       const { text, usage: u } = await llm.streamText(
-        { system: WRITER_SYSTEM, prompt: writerPrompt(item, s, args.tone, args.key_points), maxTokens: 600 },
+        { system: writerSystem(business), prompt: writerPrompt(item, s, args.tone, args.key_points), maxTokens: 600 },
         (delta) => emit({ type: "token", text: delta }),
       );
       usage.input += u.input;
@@ -83,7 +84,7 @@ export async function runAgent(opts: RunOptions): Promise<RunResult> {
         break;
       }
 
-      const res = await llm.turn({ system: SYSTEM_PROMPT, messages, tools });
+      const res = await llm.turn({ system: systemPrompt(business), messages, tools });
       usage.input += res.usage.input_tokens;
       usage.output += res.usage.output_tokens;
       messages.push({ role: "assistant", content: res.content });

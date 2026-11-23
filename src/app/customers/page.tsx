@@ -1,9 +1,10 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { Fragment, useCallback, useEffect, useState } from "react";
+import Link from "next/link";
 import { api } from "@/lib/api";
-import type { Customer } from "@/lib/types";
-import { Button, Field, inputClass } from "@/components/ui";
+import type { Customer, Item } from "@/lib/types";
+import { Button, CategoryBadge, Field, inputClass, timeAgo } from "@/components/ui";
 
 type Row = Customer & { item_count: number };
 type Form = { name: string; company: string; email: string; tier: "standard" | "priority"; notes: string };
@@ -14,6 +15,7 @@ export default function CustomersPage() {
   const [editing, setEditing] = useState<{ id: string | null; form: Form } | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  const [openId, setOpenId] = useState<string | null>(null);
 
   const load = useCallback(async () => {
     try {
@@ -53,7 +55,7 @@ export default function CustomersPage() {
   }
 
   async function remove(c: Row) {
-    if (!confirm(`Delete ${c.name}? Their items stay but are unlinked.`)) return;
+    if (!confirm(`Delete ${c.name}? Their emails stay on the board.`)) return;
     try {
       await api(`/api/customers/${c.id}`, { method: "DELETE" });
       await load();
@@ -82,13 +84,14 @@ export default function CustomersPage() {
               <th className="px-3 py-2 font-medium">Company</th>
               <th className="px-3 py-2 font-medium">Email</th>
               <th className="px-3 py-2 font-medium">Tier</th>
-              <th className="px-3 py-2 font-medium">Items</th>
+              <th className="px-3 py-2 font-medium">Emails</th>
               <th className="px-3 py-2" />
             </tr>
           </thead>
           <tbody>
             {rows.map((c) => (
-              <tr key={c.id} className="border-t align-top">
+              <Fragment key={c.id}>
+              <tr className="border-t align-top">
                 <td className="px-3 py-2 font-medium text-slate-900">
                   {c.name}
                   {c.notes && <p className="text-xs font-normal text-slate-500">{c.notes}</p>}
@@ -98,7 +101,15 @@ export default function CustomersPage() {
                 <td className="px-3 py-2">
                   <span className={c.tier === "priority" ? "text-indigo-700" : "text-slate-500"}>{c.tier}</span>
                 </td>
-                <td className="px-3 py-2 tabular-nums">{c.item_count}</td>
+                <td className="px-3 py-2">
+                  <button
+                    className="tabular-nums text-indigo-700 hover:underline disabled:text-slate-400 disabled:no-underline"
+                    disabled={c.item_count === 0}
+                    onClick={() => setOpenId(openId === c.id ? null : c.id)}
+                  >
+                    {c.item_count} {openId === c.id ? "▴" : "▾"}
+                  </button>
+                </td>
                 <td className="space-x-1 whitespace-nowrap px-3 py-2 text-right">
                   <Button
                     variant="ghost"
@@ -116,6 +127,14 @@ export default function CustomersPage() {
                   </Button>
                 </td>
               </tr>
+              {openId === c.id && (
+                <tr className="bg-slate-50">
+                  <td colSpan={6} className="px-3 py-2">
+                    <CustomerItems customerId={c.id} />
+                  </td>
+                </tr>
+              )}
+              </Fragment>
             ))}
           </tbody>
         </table>
@@ -172,5 +191,36 @@ export default function CustomersPage() {
         </div>
       )}
     </main>
+  );
+}
+
+const STATUS_LABEL: Record<string, string> = {
+  new: "New",
+  processing: "Processing",
+  needs_review: "Needs review",
+  ready: "Ready to send",
+  done: "Done",
+};
+
+function CustomerItems({ customerId }: { customerId: string }) {
+  const [items, setItems] = useState<Item[] | null>(null);
+  useEffect(() => {
+    api<Item[]>(`/api/customers/${customerId}/items`).then(setItems, () => setItems([]));
+  }, [customerId]);
+  if (!items) return <p className="text-sm text-slate-500">Loading…</p>;
+  if (!items.length) return <p className="text-sm text-slate-500">No emails from this customer yet.</p>;
+  return (
+    <ul className="divide-y">
+      {items.map((it) => (
+        <li key={it.id} className="flex items-center gap-3 py-1.5">
+          <Link href={`/?item=${it.id}`} className="min-w-0 flex-1 truncate text-slate-900 hover:text-indigo-700 hover:underline">
+            {it.subject}
+          </Link>
+          <CategoryBadge category={it.category} />
+          <span className="w-28 text-xs text-slate-600">{STATUS_LABEL[it.status] ?? it.status}</span>
+          <span className="w-16 text-right text-xs text-slate-400">{timeAgo(it.created_at)}</span>
+        </li>
+      ))}
+    </ul>
   );
 }

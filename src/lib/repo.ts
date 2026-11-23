@@ -1,6 +1,7 @@
 import { sql } from "./db";
 import { positionBetween } from "./ordering";
 import type { Customer, Item, RunSummary, Status, Step } from "./types";
+import { DEFAULT_BUSINESS, businessSchema, type Business } from "./business";
 
 /* ---------------------------------- items --------------------------------- */
 
@@ -99,7 +100,9 @@ export async function moveToBottom(id: string, status: Status): Promise<number> 
 
 export async function listCustomers(): Promise<(Customer & { item_count: number })[]> {
   return sql()<(Customer & { item_count: number })[]>`
-    select c.*, (select count(*)::int from items i where i.customer_id = c.id) as item_count
+    select c.*, (select count(*)::int from items i
+                 where i.customer_id = c.id
+                    or (i.customer_id is null and lower(i.from_email) = lower(c.email))) as item_count
     from customers c order by c.name`;
 }
 
@@ -218,4 +221,31 @@ export async function claimNewItems(limit: number): Promise<string[]> {
       for update skip locked)
     returning id`;
   return rows.map((r) => r.id);
+}
+
+/* -------------------------------- settings -------------------------------- */
+
+/** The saved business profile, falling back to the default for any missing field. */
+export async function getBusiness(): Promise<Business> {
+  const [row] = await sql()<{ value: unknown }[]>`select value from settings where key = 'business'`;
+  const parsed = businessSchema.partial().safeParse(row?.value ?? {});
+  return { ...DEFAULT_BUSINESS, ...(parsed.success ? parsed.data : {}) };
+}
+
+export async function saveBusiness(b: Business): Promise<Business> {
+  await sql()`
+    insert into settings (key, value) values ('business', ${sql().json(b as never)})
+    on conflict (key) do update set value = excluded.value, updated_at = now()`;
+  return b;
+}
+
+/** Items from a customer: linked by the agent, or sent from their email address. */
+export async function listCustomerItems(customerId: string): Promise<Item[]> {
+  return sql().unsafe<Item[]>(
+    `select ${ITEM_COLUMNS} from items i left join customers c on c.id = i.customer_id
+     where i.customer_id = $1
+        or (i.customer_id is null and lower(i.from_email) = (select lower(email) from customers where id = $1))
+     order by i.created_at desc`,
+    [customerId],
+  );
 }
