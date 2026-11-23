@@ -57,6 +57,18 @@ export interface Item {
   created_at: string;
   updated_at: string;
   processed_at: string | null;
+  /** How the latest agent run was started, if any. */
+  last_trigger?: "manual" | "scheduled" | null;
+}
+
+export interface RunSummary {
+  trigger: "manual" | "scheduled";
+  status: string;
+  model: string | null;
+  input_tokens: number;
+  output_tokens: number;
+  started_at: string;
+  ended_at: string | null;
 }
 
 export type StepKind =

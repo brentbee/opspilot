@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { api } from "@/lib/api";
-import type { Item, Step } from "@/lib/types";
+import type { Item, RunSummary, Step } from "@/lib/types";
 import type { LiveRun } from "./Board";
 import { Timeline } from "./Timeline";
 import { Button, CategoryBadge, Confidence, Field, PriorityTag, inputClass } from "./ui";
@@ -23,6 +23,7 @@ export function ItemDrawer({
   onDelete: () => void;
 }) {
   const [savedSteps, setSavedSteps] = useState<Step[] | null>(null);
+  const [run, setRun] = useState<RunSummary | null>(null);
   const [editing, setEditing] = useState(false);
   const [form, setForm] = useState({ subject: item.subject, body: item.body });
   const [draft, setDraft] = useState(item.draft_reply ?? "");
@@ -34,8 +35,12 @@ export function ItemDrawer({
   useEffect(() => {
     if (live?.running) return;
     let cancelled = false;
-    api<{ item: Item; steps: Step[] }>(`/api/items/${item.id}`)
-      .then((r) => !cancelled && setSavedSteps(r.steps))
+    api<{ item: Item; steps: Step[]; run: RunSummary | null }>(`/api/items/${item.id}`)
+      .then((r) => {
+        if (cancelled) return;
+        setSavedSteps(r.steps);
+        setRun(r.run);
+      })
       .catch(() => !cancelled && setSavedSteps([]));
     return () => {
       cancelled = true;
@@ -130,6 +135,12 @@ export function ItemDrawer({
 
           <section>
             <h3 className="mb-2 text-sm font-semibold text-slate-800">Agent steps</h3>
+            {run && !running && run.model !== "seed" && (
+              <p className="mb-2 text-xs text-slate-500">
+                Last run: {run.trigger === "scheduled" ? "⏱ scheduled job" : "manual"} · {run.model} ·{" "}
+                {(run.input_tokens + run.output_tokens).toLocaleString()} tokens · {run.status}
+              </p>
+            )}
             <Timeline steps={steps} running={running} />
           </section>
 

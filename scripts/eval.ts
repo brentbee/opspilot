@@ -9,7 +9,7 @@
 import { anthropicLLM } from "../src/agent/llm";
 import { runAgent, type AgentStore } from "../src/agent/runAgent";
 import type { Customer, Item, Step } from "../src/lib/types";
-import { CUSTOMERS, NEW_ITEMS } from "./seed-data";
+import { CUSTOMERS, NEW_ITEMS } from "../src/lib/seed-data";
 
 const customers: Customer[] = CUSTOMERS.map((c, i) => ({ ...c, id: `c${i}`, created_at: "" }));
 

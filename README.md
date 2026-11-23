@@ -32,7 +32,8 @@ Every step streams to the screen as it happens. Anything uncertain or risky land
 3. Drag a card between columns, then reload: the move is saved and logged as a human override.
 4. **+ New item** → paste anything → **Add & run agent**.
    Or press **✨ Generate 10 emails** (top right). Claude writes a fresh batch of fictional emails. Code picks the scenario mix (complaints, large invoices, fraud attempts, vague one-liners, mixed requests) and the senders, so each batch exercises different agent paths. Then press **Process all New**.
-5. Check **Dashboard** and **Customers**. Edit a customer's notes and the agent's next reply uses them.
+5. **Reset demo** (board header) restores the original data at any time.
+6. Check **Dashboard** and **Customers**. Edit a customer's notes and the agent's next reply uses them.
 
 ## 2. Architecture
 
@@ -80,7 +81,7 @@ This project was built AI-first, with a human directing and checking the work:
   - 37 unit tests: policy, ordering, SSE parsing, tool validation, and the agent loop against a scripted model, including bad tool input, model failure and the time budget;
   - a run of the full agent loop, with a scripted model, against a real Postgres database;
   - screenshot review of every page;
-  - `npm run eval`, which runs the *real* model over 12 labelled items and reports category accuracy, routing accuracy and **unsafe auto-routes**, i.e. items that needed a human but went to Ready. That last one is the metric that matters.
+  - `npm run eval` (also a manual **Agent eval** GitHub Action, using the `ANTHROPIC_API_KEY` repo secret), which runs the *real* model over 12 labelled items and reports category accuracy, routing accuracy and **unsafe auto-routes**, i.e. items that needed a human but went to Ready. That last one is the metric that matters.
 
 ## 4. Built vs stubbed (honest status)
 | Area | Status |
@@ -91,7 +92,7 @@ This project was built AI-first, with a human directing and checking the work:
 | Auth / multi-tenant | **Not built.** Single-tenant demo, no login |
 | Dashboard history | 16 historical items are **seeded** so the charts have shape; new runs add real rows |
 | "Time saved" figure | An **estimate** (6 min per item), labelled as such |
-| Scheduled processing | Built. On Vercel Hobby, cron runs once a day; "Process all New" runs the batch on demand |
+| Scheduled processing | Built. A Vercel cron job runs once a day (the Hobby plan limit) and processes up to 3 New items. Scheduled runs show a ⏱ on the card and in the timeline, and the last run time is on the dashboard. "Process all New" runs a batch on demand |
 
 ## 5. Trade-offs and what I'd do next
 - **Calibrate confidence.** The model's self-reported confidence is a weak signal. Next: grow the labelled eval set, run `npm run eval` in CI on prompt or model changes, and tune the threshold against the unsafe-route rate.

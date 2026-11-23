@@ -1,0 +1,39 @@
+name: Agent eval
+
+# Runs the real agent over the labelled seed items and reports category
+# accuracy, routing accuracy and unsafe auto-routes. Manual only, because it
+# spends API credits. Requires the ANTHROPIC_API_KEY repository secret.
+on:
+  workflow_dispatch:
+    inputs:
+      model:
+        description: "Model for the agent loop"
+        default: "claude-sonnet-5-5"
+        required: true
+
+jobs:
+  eval:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - name: Run eval
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          AGENT_MODEL: ${{ inputs.model }}
+        run: |
+          set -o pipefail
+          npm run --silent eval | tee eval.txt
+      - name: Publish summary
+        if: always()
+        run: |
+          {
+            echo "## Agent eval (${{ inputs.model }})"
+            echo '```'
+            cat eval.txt 2>/dev/null || echo "eval did not produce output"
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"

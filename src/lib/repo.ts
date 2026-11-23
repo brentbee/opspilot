@@ -1,6 +1,6 @@
 import { sql } from "./db";
 import { positionBetween } from "./ordering";
-import type { Customer, Item, Status, Step } from "./types";
+import type { Customer, Item, RunSummary, Status, Step } from "./types";
 
 /* ---------------------------------- items --------------------------------- */
 
@@ -8,7 +8,8 @@ const ITEM_COLUMNS = `
   i.id, i.subject, i.body, i.from_name, i.from_email, i.status, i.position,
   i.category, i.priority, i.confidence, i.extracted, i.customer_id,
   c.name as customer_name, i.draft_reply, i.route_reason, i.agent_ms,
-  i.created_at, i.updated_at, i.processed_at`;
+  i.created_at, i.updated_at, i.processed_at,
+  (select r.trigger from agent_runs r where r.item_id = i.id order by r.started_at desc limit 1) as last_trigger`;
 
 export async function listItems(): Promise<Item[]> {
   return sql().unsafe<Item[]>(
@@ -189,6 +190,14 @@ export async function insertStep(step: Step): Promise<Step> {
             ${sql().json(step.payload as never)})
     returning *`;
   return row;
+}
+
+
+export async function latestRun(itemId: string): Promise<RunSummary | null> {
+  const [row] = await sql()<RunSummary[]>`
+    select trigger, status, model, input_tokens, output_tokens, started_at, ended_at
+    from agent_runs where item_id = ${itemId} order by started_at desc limit 1`;
+  return row ?? null;
 }
 
 /** Steps of the latest run plus any human overrides, oldest first. */

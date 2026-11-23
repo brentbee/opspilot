@@ -100,6 +100,18 @@ export function Board() {
     [load, upsert],
   );
 
+  async function resetDemo() {
+    if (!confirm("Reset the board to the original demo data? This deletes all items and runs.")) return;
+    try {
+      await api("/api/demo/reset", { method: "POST" });
+      setRuns({});
+      setOpenId(null);
+      await load();
+    } catch (e) {
+      setError((e as Error).message);
+    }
+  }
+
   async function runAllNew() {
     setBatch(true);
     try {
@@ -182,6 +194,9 @@ export function Board() {
           </p>
         </div>
         <div className="ml-auto flex gap-2">
+          <Button variant="ghost" onClick={resetDemo} disabled={batch} title="Restore the original demo data">
+            Reset demo
+          </Button>
           <Button onClick={() => setCreating(true)}>+ New item</Button>
           <Button variant="primary" disabled={batch || newCount === 0} onClick={runAllNew}>
             {batch ? "Processing…" : `Process all New (${newCount})`}
@@ -335,7 +350,16 @@ function CardBody({ item, live, lifted }: { item: Item; live?: LiveRun; lifted?:
           <div className="mt-2 flex items-center gap-2">
             <CategoryBadge category={item.category} />
             <Confidence value={item.confidence} />
-            {item.agent_ms != null && <span className="ml-auto text-[11px] text-slate-400">{(item.agent_ms / 1000).toFixed(1)}s</span>}
+            {item.agent_ms != null && (
+              <span className="ml-auto text-[11px] text-slate-400">
+                {item.last_trigger === "scheduled" && (
+                  <span title="Processed by the scheduled job" className="mr-1">
+                    ⏱
+                  </span>
+                )}
+                {(item.agent_ms / 1000).toFixed(1)}s
+              </span>
+            )}
           </div>
         )
       )}

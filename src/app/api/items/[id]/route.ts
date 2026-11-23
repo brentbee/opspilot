@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { deleteItem, getItem, insertStep, listSteps, updateItem, type ItemPatch } from "@/lib/repo";
+import { deleteItem, getItem, insertStep, latestRun, listSteps, updateItem, type ItemPatch } from "@/lib/repo";
 import { idParam, notFound, parseBody } from "@/lib/http";
 import { CATEGORIES, PRIORITIES } from "@/lib/types";
 
@@ -11,7 +11,7 @@ export async function GET(_req: Request, { params }: Ctx) {
   const id = await idParam(params);
   const item = id && (await getItem(id));
   if (!item) return notFound("Item not found");
-  return Response.json({ item, steps: await listSteps(item.id) });
+  return Response.json({ item, steps: await listSteps(item.id), run: await latestRun(item.id) });
 }
 
 const patchSchema = z
@@ -38,6 +38,8 @@ export async function PATCH(req: Request, { params }: Ctx) {
   const parsed = await parseBody(req, patchSchema);
   if ("error" in parsed) return parsed.error;
   const patch: ItemPatch = parsed.data;
+  // Sending a card back to New clears the old routing verdict; it is stale until the agent re-runs.
+  if (patch.status === "new" && before.status !== "new") patch.route_reason = null;
 
   const item = await updateItem(before.id, patch);
 

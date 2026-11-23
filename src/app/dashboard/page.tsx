@@ -80,6 +80,20 @@ export default function DashboardPage() {
         </section>
       </div>
 
+      <section className="rounded-lg border bg-white p-4 text-sm">
+        <h2 className="mb-1 font-semibold">⏱ Scheduled workload</h2>
+        <p className="text-slate-600">
+          A cron job (daily, 08:00 Brisbane) picks up to 3 items from New and runs the agent on them, with no human
+          trigger. Last scheduled run:{" "}
+          <span className="font-medium text-slate-900">
+            {stats.scheduled.last_run_at
+              ? new Date(stats.scheduled.last_run_at).toLocaleString("en-AU", { timeZone: "Australia/Brisbane" })
+              : "not yet"}
+          </span>
+          . Last 7 days: {stats.scheduled.runs_7d} scheduled runs, {stats.scheduled.manual_runs_7d} manual runs.
+        </p>
+      </section>
+
       <p className="text-xs text-slate-500">
         Est. {Math.round(stats.minutes_saved / 60)} h of triage saved (assumes 6 min of manual handling per item) ·{" "}
         {t.tokens.toLocaleString()} tokens used

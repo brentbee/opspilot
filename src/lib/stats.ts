@@ -16,6 +16,7 @@ export interface Stats {
   by_category: { category: string; count: number }[];
   per_day: { day: string; created: number; processed: number }[];
   minutes_saved: number;
+  scheduled: { last_run_at: string | null; runs_7d: number; manual_runs_7d: number };
 }
 
 /** Rough handling time a person spends per item without the agent, for the "time saved" KPI. */
@@ -23,7 +24,7 @@ export const MANUAL_MINUTES_PER_ITEM = 6;
 
 export async function getStats(): Promise<Stats> {
   const db = sql();
-  const [[totals], byCategory, perDay, [routing]] = await Promise.all([
+  const [[totals], byCategory, perDay, [routing], [scheduled]] = await Promise.all([
     db<Stats["totals"][]>`
       select
         (select count(*)::int from items) as items,
@@ -51,6 +52,13 @@ export async function getStats(): Promise<Stats> {
       from (
         select distinct on (item_id) item_id, payload from agent_steps
         where kind = 'route' order by item_id, id desc) last_route`,
+    db<Stats["scheduled"][]>`
+      select
+        (select max(started_at) from agent_runs where trigger = 'scheduled' and model <> 'seed') as last_run_at,
+        (select count(*)::int from agent_runs where trigger = 'scheduled' and model <> 'seed'
+           and started_at > now() - interval '7 days') as runs_7d,
+        (select count(*)::int from agent_runs where trigger = 'manual'
+           and started_at > now() - interval '7 days') as manual_runs_7d`,
   ]);
 
   return {
@@ -59,5 +67,6 @@ export async function getStats(): Promise<Stats> {
     by_category: byCategory,
     per_day: perDay,
     minutes_saved: totals.processed * MANUAL_MINUTES_PER_ITEM,
+    scheduled,
   };
 }
