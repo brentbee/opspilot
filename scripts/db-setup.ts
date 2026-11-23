@@ -3,6 +3,9 @@
  *
  *   npm run db:setup           # create tables (idempotent), seed only if empty
  *   npm run db:setup -- --reset  # wipe all data and reseed (demo reset)
+ *
+ * Also runs on every Vercel deploy (`vercel-build`), so a fresh Supabase
+ * project is set up automatically on the first deploy.
  */
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
@@ -13,7 +16,11 @@ const DAY = 86_400_000;
 
 async function main() {
   const url = process.env.DATABASE_URL;
-  if (!url) throw new Error("DATABASE_URL is not set");
+  if (!url) {
+    // Lets `vercel-build` run in environments without a database (e.g. CI).
+    console.warn("db:setup skipped: DATABASE_URL is not set");
+    return;
+  }
   const reset = process.argv.includes("--reset");
   const sql = postgres(url, { prepare: false, max: 1, onnotice: () => {} });
 

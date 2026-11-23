@@ -10,7 +10,8 @@
     "db:setup": "tsx --env-file-if-exists=.env.local scripts/db-setup.ts",
     "test": "vitest run",
     "typecheck": "next typegen && tsc --noEmit",
-    "eval": "tsx --env-file-if-exists=.env.local scripts/eval.ts"
+    "eval": "tsx --env-file-if-exists=.env.local scripts/eval.ts",
+    "vercel-build": "npm run db:setup && next build"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^1.12.0",
