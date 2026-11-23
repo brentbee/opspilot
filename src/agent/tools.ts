@@ -46,7 +46,7 @@ export const draftReplyInput = z.object({
 export const moveCardInput = z.object({
   status: z
     .enum(["ready", "needs_review"])
-    .describe("ready = safe to send without a human; needs_review = a human should check first"),
+    .describe("ready = this draft can be sent as-is (follow-up work after sending is fine); needs_review = sending this reply needs a human check first"),
   reason: z.string().describe("One short sentence"),
 });
 
