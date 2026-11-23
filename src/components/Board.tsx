@@ -22,6 +22,7 @@ import { BOARD_COLUMNS, type Item, type Status, type Step } from "@/lib/types";
 import { Button, CategoryBadge, Confidence, PriorityTag, cx, timeAgo } from "./ui";
 import { ItemDrawer } from "./ItemDrawer";
 import { NewItemDialog } from "./NewItemDialog";
+import { ITEMS_CHANGED } from "./GenerateButton";
 
 export interface LiveRun {
   steps: Step[];
@@ -60,6 +61,9 @@ export function Board() {
     // Initial load from the API (an external system), then render.
      
     void load();
+    const reload = () => void load();
+    window.addEventListener(ITEMS_CHANGED, reload);
+    return () => window.removeEventListener(ITEMS_CHANGED, reload);
   }, [load]);
 
   const columns = useMemo(() => {

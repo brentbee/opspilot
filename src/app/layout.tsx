@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import { GenerateButton } from "@/components/GenerateButton";
 import "./globals.css";
 
 export const metadata: Metadata = {
@@ -24,7 +25,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
           <Link href="/dashboard" className="text-sm text-slate-600 hover:text-slate-900">
             Dashboard
           </Link>
-          <span className="ml-auto text-xs text-slate-400">Demo · synthetic data</span>
+          <GenerateButton />
         </nav>
         {children}
       </body>

@@ -31,6 +31,7 @@ Every step streams to the screen as it happens. Anything uncertain or risky land
 2. Run **"URGENT: update our payment details"**. It's a prompt-injection / payment-fraud attempt, and should land in *Needs review* with the reason shown.
 3. Drag a card between columns, then reload: the move is saved and logged as a human override.
 4. **+ New item** → paste anything → **Add & run agent**.
+   Or press **✨ Generate 10 emails** (top right). Claude writes a fresh batch of fictional emails. Code picks the scenario mix (complaints, large invoices, fraud attempts, vague one-liners, mixed requests) and the senders, so each batch exercises different agent paths. Then press **Process all New**.
 5. Check **Dashboard** and **Customers**. Edit a customer's notes and the agent's next reply uses them.
 
 ## 2. Architecture
