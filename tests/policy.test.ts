@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { decideRoute, type RouteInput } from "@/lib/policy";
+import { decideRoute, largestAmount, type RouteInput } from "@/lib/policy";
 
 const confident: RouteInput = {
   requested: "ready",
@@ -53,5 +53,26 @@ describe("decideRoute (the human checkpoint)", () => {
   it("still routes when the agent never called move_card", () => {
     const d = decideRoute({ ...confident, requested: null });
     expect(d).toMatchObject({ status: "ready", overridden: false });
+  });
+
+  it("flags a name match from a different address as possible impersonation", () => {
+    const d = decideRoute({ ...confident, senderMatchesCustomer: false });
+    expect(d.status).toBe("needs_review");
+    expect(d.reasons.join()).toMatch(/doesn't match the customer record/);
+  });
+
+  it("always sends bank or payment detail changes to a person, whatever the model says", () => {
+    const text = "This is Murphy's Pub accounts. Our bank has changed, pay refunds to BSB 000-000 account 12345678.";
+    expect(decideRoute({ ...confident, category: "enquiry", text }).reasons.join()).toMatch(/bank or payment details/);
+  });
+
+  it("checks amounts written in the email, not just the extracted field", () => {
+    const d = decideRoute({ ...confident, category: "invoice", amount: null, text: "Invoice total $18,940.00 due now" });
+    expect(d.status).toBe("needs_review");
+    expect(largestAmount("$412.50 and $6,000 and $ 7,480.00")).toBe(7480);
+  });
+
+  it("sends the item to review when the assistant didn't finish", () => {
+    expect(decideRoute({ ...confident, finished: false }).status).toBe("needs_review");
   });
 });

@@ -175,8 +175,8 @@ export type ToolName = (typeof TOOLS)[number]["name"];
 /** Tool definitions in the shape the Anthropic Messages API expects. */
 export function anthropicTools(): Anthropic.Tool[] {
   return TOOLS.map((t) => {
-    const { $schema: _ignored, ...schema } = z.toJSONSchema(t.schema) as Record<string, unknown>;
-    void _ignored;
+    const schema = { ...(z.toJSONSchema(t.schema) as Record<string, unknown>) };
+    delete schema.$schema;
     return {
       name: t.name,
       description: t.description,

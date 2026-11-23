@@ -28,7 +28,9 @@ export const DEFAULT_MODEL = "claude-sonnet-5-5";
 export function anthropicLLM(): AgentLLM {
   const apiKey = process.env.ANTHROPIC_API_KEY;
   if (!apiKey) throw new Error("ANTHROPIC_API_KEY is not set (see .env.example)");
-  const client = new Anthropic({ apiKey, timeout: 40_000, maxRetries: 1 });
+  // Short timeouts and no SDK retries keep a run well inside the function's time limit;
+  // a failed run goes to a person rather than retrying for minutes.
+  const client = new Anthropic({ apiKey, timeout: 20_000, maxRetries: 0 });
   const model = process.env.AGENT_MODEL || DEFAULT_MODEL;
   const writerModel = process.env.WRITER_MODEL || model;
 
@@ -46,13 +48,16 @@ export function anthropicLLM(): AgentLLM {
       });
     },
     async streamText({ system, prompt, maxTokens }, onText) {
-      const stream = client.messages.stream({
+      const stream = client.messages.stream(
+        {
         model: writerModel,
         max_tokens: maxTokens,
         system,
         messages: [{ role: "user", content: prompt }],
         output_config: { effort: "low" },
-      });
+        },
+        { timeout: 25_000 },
+      );
       stream.on("text", onText);
       const final = await stream.finalMessage();
       const text = final.content

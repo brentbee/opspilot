@@ -33,7 +33,7 @@ export async function getStats(): Promise<Stats> {
         (select count(*)::int from items where status = 'needs_review') as needs_review,
         (select count(*)::int from items where status = 'done') as done,
         (select round(avg(agent_ms))::int from items where agent_ms is not null) as avg_agent_ms,
-        (select count(*)::int from agent_steps where kind = 'human_override') as human_overrides,
+        (select count(*)::int from agent_steps where kind = 'human_override' and payload->>'to' <> 'done') as human_overrides,
         (select coalesce(sum(input_tokens + output_tokens), 0)::int from agent_runs) as tokens`,
     db<Stats["by_category"]>`
       select coalesce(category, 'unprocessed') as category, count(*)::int as count

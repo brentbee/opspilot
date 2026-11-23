@@ -19,7 +19,7 @@ const patchSchema = z
     subject: z.string().trim().min(1).max(200),
     body: z.string().trim().min(1).max(8000),
     from_name: z.string().trim().max(120).nullable(),
-    from_email: z.string().trim().max(200).nullable(),
+    from_email: z.string().trim().email().max(200).nullable(),
     // Humans may move cards anywhere except the transient "processing" state.
     status: z.enum(["new", "needs_review", "ready", "done"]),
     position: z.number().finite(),

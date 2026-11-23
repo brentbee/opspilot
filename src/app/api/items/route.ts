@@ -1,6 +1,7 @@
 import { z } from "zod";
 import { createItem, listItems } from "@/lib/repo";
 import { parseBody } from "@/lib/http";
+import { creationBlocked } from "@/lib/limits";
 
 export const dynamic = "force-dynamic";
 
@@ -18,5 +19,7 @@ const createSchema = z.object({
 export async function POST(req: Request) {
   const parsed = await parseBody(req, createSchema);
   if ("error" in parsed) return parsed.error;
+  const blocked = await creationBlocked(1);
+  if (blocked) return Response.json({ error: blocked }, { status: 429 });
   return Response.json(await createItem(parsed.data), { status: 201 });
 }

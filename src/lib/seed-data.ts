@@ -52,7 +52,7 @@ export const NEW_ITEMS: SeedItem[] = [
     from_name: "Grace Nguyen",
     from_email: "accounts@phoreal.example",
     body: "Hello,\n\nPlease find our remittance query below. We received invoice INV-20931 for $412.50 for the November service visit, due 10 December. Can you confirm the bank details are unchanged before we pay?\n\nRegards,\nGrace",
-    expect: { category: "invoice", route: "ready" },
+    expect: { category: "invoice", route: "needs_review" },
   },
   {
     subject: "Fridge still not cold after your visit!!",

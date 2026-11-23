@@ -196,14 +196,14 @@ describe("runAgent", () => {
     expect(events.some((e) => e.type === "error")).toBe(true);
   });
 
-  it("finishes when the model ends its turn without move_card", async () => {
+  it("sends the item to review when the model stops before move_card", async () => {
     const { store, state } = memoryStore();
     const turns = happyPath().slice(0, 4);
     turns.push(message([{ type: "text", text: "Done.", citations: null } as Anthropic.TextBlock], "end_turn"));
     const { llm } = scriptedLLM(turns);
     const res = await runAgent({ itemId: "i1", llm, store, emit: () => {} });
-    expect(res.status).toBe("ready");
-    expect(state.steps.at(-1)?.payload).toMatchObject({ requested: null, final: "ready" });
+    expect(res.status).toBe("needs_review");
+    expect(state.steps.at(-1)?.payload).toMatchObject({ requested: null, final: "needs_review" });
   });
 
   it("enforces the time budget", async () => {
@@ -219,8 +219,8 @@ describe("runAgent", () => {
 describe("friendlyError", () => {
   it.each([
     ['429 {"type":"error","error":{"type":"rate_limit_error"}}', /busy/],
-    ["401 invalid x-api-key", /set up correctly/],
+    [{ status: 401, message: "invalid x-api-key" }, /set up correctly/],
     ["Request timed out.", /didn't respond/],
     ["weird", /Something went wrong/],
-  ])("maps %s", (detail, expected) => expect(friendlyError(detail)).toMatch(expected));
+  ])("maps %o", (err, expected) => expect(friendlyError(err)).toMatch(expected));
 });

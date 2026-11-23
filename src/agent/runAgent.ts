@@ -1,13 +1,15 @@
 import type Anthropic from "@anthropic-ai/sdk";
 import { decideRoute } from "@/lib/policy";
-import type { AgentEvent, Item, Status, Step, StepKind } from "@/lib/types";
+import type { AgentEvent, Item, Status, StepKind } from "@/lib/types";
 import type * as repo from "@/lib/repo";
 import type { AgentLLM } from "./llm";
+import type { Business } from "@/lib/business";
 import { itemPrompt, systemPrompt, writerPrompt, writerSystem } from "./prompt";
 import { anthropicTools, emptyState, runTool, type RunState, type ToolDeps } from "./tools";
 
 export const MAX_TURNS = 8;
-export const RUN_BUDGET_MS = 50_000;
+/** Stop starting new model turns after this; the route allows 120 s in total. */
+export const RUN_BUDGET_MS = 60_000;
 
 /** The persistence the agent needs; the real implementation is lib/repo. */
 export type AgentStore = Pick<
@@ -31,7 +33,10 @@ export interface RunResult {
 }
 
 /**
- * Runs the OpsPilot agent on one item: a tool-use loop where every model
+ * Runs the OpsPilot agent on one item. The caller must already have claimed
+ * the item (status "processing") via claimItem / claimNewItems.
+ *
+ * It is a tool-use loop where every model
  * thought, tool call and tool result is saved as a step and streamed to the
  * UI, followed by the deterministic review policy that picks the final column.
  */
@@ -45,10 +50,19 @@ export async function runAgent(opts: RunOptions): Promise<RunResult> {
     emit({ type: "error", message: "Item not found" });
     return { status: "new", ms: 0, runId: null };
   }
+  const subject: Item = item;
 
-  const business = await store.getBusiness();
-  await store.updateItem(itemId, { status: "processing" });
-  const runId = await store.startRun(itemId, llm.model, opts.trigger ?? "manual");
+  let business: Business;
+  let runId: string;
+  try {
+    business = await store.getBusiness();
+    runId = await store.startRun(itemId, llm.model, opts.trigger ?? "manual");
+  } catch (err) {
+    // Nothing has run yet: put the item back so it can be retried.
+    await store.updateItem(itemId, { status: "new" }).catch(() => {});
+    emit({ type: "error", message: friendlyError(err) });
+    return { status: "new", ms: 0, runId: null };
+  }
   emit({ type: "run", runId, model: llm.model });
 
   let seq = 0;
@@ -76,6 +90,7 @@ export async function runAgent(opts: RunOptions): Promise<RunResult> {
 
   try {
     const messages: Anthropic.MessageParam[] = [{ role: "user", content: itemPrompt(item) }];
+    let lastStop: Anthropic.StopReason | null = null;
     const tools = anthropicTools();
 
     for (let turn = 0; turn < MAX_TURNS; turn++) {
@@ -83,8 +98,10 @@ export async function runAgent(opts: RunOptions): Promise<RunResult> {
         await step("error", null, { message: "This one took too long, so it was left for staff to check." });
         break;
       }
+      if (turn > 0 && lastStop === "max_tokens") break;
 
       const res = await llm.turn({ system: systemPrompt(business), messages, tools });
+      lastStop = res.stop_reason;
       usage.input += res.usage.input_tokens;
       usage.output += res.usage.output_tokens;
       messages.push({ role: "assistant", content: res.content });
@@ -115,7 +132,7 @@ export async function runAgent(opts: RunOptions): Promise<RunResult> {
   } catch (err) {
     const detail = err instanceof Error ? err.message : String(err);
     // Staff see a plain message; the technical detail is kept on the run record.
-    const message = friendlyError(detail);
+    const message = friendlyError(err);
     await step("error", null, { message });
     emit({ type: "error", message });
     return await finalise(true, detail);
@@ -127,14 +144,20 @@ export async function runAgent(opts: RunOptions): Promise<RunResult> {
       confidence: state.classification?.confidence,
       category: state.classification?.category,
       customerFound: state.customer != null,
+      senderMatchesCustomer:
+        state.customer != null &&
+        !!subject.from_email &&
+        state.customer.email?.toLowerCase() === subject.from_email.trim().toLowerCase(),
       amount: state.extracted?.amount,
       hasDraft: Boolean(state.draft),
+      finished: state.requested != null,
+      text: `${subject.subject}\n${subject.body}`,
     });
     if (failed) decision.reasons.unshift("the assistant couldn't finish");
     const status: Status = failed ? "needs_review" : decision.status;
     const reason = decision.reasons.length
       ? `Needs review: ${decision.reasons.join("; ")}.`
-      : `Ready: ${state.requestReason ?? "all checks passed"}.`;
+      : `Ready: ${(state.requestReason ?? "all checks passed").replace(/\.+$/, "")}.`;
 
     await step("route", "policy", {
       requested: state.requested,
@@ -169,11 +192,15 @@ export async function runAgent(opts: RunOptions): Promise<RunResult> {
 }
 
 /** Turns API and network failures into a sentence a non-technical user can act on. */
-export function friendlyError(detail: string): string {
-  if (/\b(429|529)\b|overloaded|rate.?limit/i.test(detail)) return "The AI service is busy right now. Try again in a minute.";
-  if (/\b(401|403)\b|api.?key|authentication/i.test(detail)) return "The AI service isn't set up correctly. Ask your administrator.";
-  if (/timeout|timed out|ETIMEDOUT|ECONNRESET|fetch failed|network/i.test(detail)) return "The AI service didn't respond in time. Try again.";
+export function friendlyError(err: unknown): string {
+  const status = typeof err === "object" && err && "status" in err ? Number((err as { status: unknown }).status) : NaN;
+  const name = err instanceof Error ? err.name : "";
+  const detail = err instanceof Error ? err.message : String(err);
+  if (status === 429 || status === 529 || /overloaded|rate_limit/i.test(detail))
+    return "The AI service is busy right now. Try again in a minute.";
+  if (status === 401 || status === 403) return "The AI service isn't set up correctly. Ask your administrator.";
+  if (/Timeout|Connection/.test(name) || /timed out|ETIMEDOUT|ECONNRESET|fetch failed/i.test(detail))
+    return "The AI service didn't respond in time. Try again.";
   return "Something went wrong while processing this item. Try again, or handle it manually.";
 }
 
-export type { Step };

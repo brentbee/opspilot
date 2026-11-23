@@ -20,6 +20,6 @@ Read `SPEC.md` before changing behaviour. If a change contradicts the spec, upda
 
 ## Conventions
 - TypeScript strict, no `any`. Route handlers validate bodies with zod (`parseBody`).
-- SQL via `postgres` tagged templates only (parameterised); no string-built SQL with user input.
+- SQL via `postgres` tagged templates (parameterised). `sql().unsafe` is only allowed with constant SQL text and `$n` parameters; never interpolate user input into SQL.
 - Small commits with imperative messages. Add or update a test with every behaviour change.
 - Data is synthetic. Use `.example` email domains; never add real names, customers or credentials.

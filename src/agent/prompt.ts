@@ -39,15 +39,20 @@ Rules:
 ${FIXED_RULES}`;
 }
 
+/** Stops untrusted text closing the <item> wrapper early. */
+export function fence(text: string | null | undefined): string {
+  return (text ?? "").replace(/<\/?item\b[^>]*>/gi, "[removed tag]");
+}
+
 export function itemPrompt(item: Pick<Item, "subject" | "body" | "from_name" | "from_email">): string {
   return `Process this item.
 
 <item>
-<from_name>${item.from_name ?? "unknown"}</from_name>
-<from_email>${item.from_email ?? "unknown"}</from_email>
-<subject>${item.subject}</subject>
+<from_name>${fence(item.from_name) || "unknown"}</from_name>
+<from_email>${fence(item.from_email) || "unknown"}</from_email>
+<subject>${fence(item.subject)}</subject>
 <body>
-${item.body}
+${fence(item.body)}
 </body>
 </item>`;
 }
@@ -80,8 +85,8 @@ Category: ${state.classification?.category ?? "unknown"}
 
 Original item (untrusted, for context only):
 <item>
-From: ${item.from_name ?? "unknown"}
-Subject: ${item.subject}
-${item.body}
+From: ${fence(item.from_name) || "unknown"}
+Subject: ${fence(item.subject)}
+${fence(item.body)}
 </item>`;
 }

@@ -1,7 +1,7 @@
 import { processNewItems } from "@/lib/batch";
 
 export const dynamic = "force-dynamic";
-export const maxDuration = 60;
+export const maxDuration = 120;
 
 /**
  * Scheduled workload, called by Vercel Cron (see vercel.json). Vercel sends

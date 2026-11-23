@@ -58,13 +58,14 @@ Postgres (Supabase): customers · items · agent_runs · agent_steps
 ```
 
 **Key design decisions**
-- **The human checkpoint is code, not a prompt.** The model *asks* for a column with `move_card`, but `src/lib/policy.ts` makes the final call. It sends an item to review if confidence is below 0.75, the sender is unknown, it is a complaint, it is an invoice over $5k, there is no draft, or the run failed. A prompt can be talked out of a rule; a function cannot. The timeline shows when the policy overrode the agent. Moving a card to **Done** is human-only.
+- **The human checkpoint is code, not a prompt.** The model *asks* for a column with `move_card`, but `src/lib/policy.ts` makes the final call. It sends an item to review if any of these hold: confidence is below 0.75; an unknown sender is asking about money, or the request is unclear; the sender's address doesn't match the customer it was matched to (possible impersonation); the email mentions bank or payment details; it is a complaint; an amount over $5k appears in an invoice; there is no draft; the agent stopped early; or the run failed. The bank-details and amount checks run on the raw email text, so they hold even if the model misreads it. A prompt can be talked out of a rule; a function cannot. The timeline shows when the policy overrode the agent. Moving a card to **Done** is human-only.
 - **Record tools for structured output.** `extract_fields` and `classify` have no side effects: the tool *input* is the structured result. The JSON schemas are generated from zod schemas, and the same zod schemas validate what the model sends. Invalid input goes back to the model as an `is_error` tool result so it can correct itself, rather than crashing the run.
 - **Save, then stream.** Each step is written to `agent_steps` before it is sent over SSE. A reload, or a client that disconnects mid-run, loses nothing, and the timeline is an audit log.
 - **Injected dependencies.** `runAgent` takes an `AgentLLM` and an `AgentStore`, so the whole loop is unit tested with a scripted fake model and an in-memory store. There are no network or DB calls in the tests.
 - **Untrusted input.** Item text is wrapped in `<item>` tags, and the system prompt tells the model to ignore instructions inside it. The policy is the backstop if it doesn't.
 - **Direct Postgres, locked-down REST.** The server connects with `postgres` through Supabase's transaction pooler. Row-level security is enabled with no policies, so Supabase's public REST API can't read or write the tables.
-- **Protecting a public demo.** A global per-hour cap on agent runs (`RUN_LIMIT_PER_HOUR`) plus a spend limit on the API key. Calls use low effort, and the writer can be a smaller model (`WRITER_MODEL`).
+- **Protecting a public demo.** A global per-hour cap on agent runs (`RUN_LIMIT_PER_HOUR`, default 60) and on new items, a cooldown on demo reset, plus a spend limit on the API key. Calls use low effort, and the writer can be a smaller model (`WRITER_MODEL`).
+- **Runs can't get stuck or double up.** A run atomically claims its item, so a double-click can't start two. Model calls have short timeouts within the function's time limit, and items left in "processing" by a killed run are recovered after 3 minutes.
 
 ## 3. AI workflow: how this was built
 
@@ -78,8 +79,9 @@ This project was built AI-first, with a human directing and checking the work:
   - a public repo with synthetic data;
   - what to cut.
 - **Verification:**
-  - 37 unit tests: policy, ordering, SSE parsing, tool validation, and the agent loop against a scripted model, including bad tool input, model failure and the time budget;
-  - a run of the full agent loop, with a scripted model, against a real Postgres database;
+  - 63 unit tests: policy (including impersonation, bank-detail and amount checks), ordering, SSE parsing, tool validation, prompt fencing, the business profile, the email generator, and the agent loop against a scripted model, including bad tool input, model failure, stopping early and the time budget;
+  - manual end-to-end checks: the agent loop with a scripted model against a local Postgres, then live runs on the deployed app;
+  - an independent AI code review before submission, whose findings were fixed (stuck runs, double runs, an impersonation gap in customer matching, abuse limits);
   - screenshot review of every page;
   - `npm run eval` (also a manual **Agent eval** GitHub Action, using the `ANTHROPIC_API_KEY` repo secret), which runs the *real* model over 12 labelled items and reports category accuracy, routing accuracy and **unsafe auto-routes**, i.e. items that needed a human but went to Ready. That last one is the metric that matters.
 
@@ -89,7 +91,7 @@ This project was built AI-first, with a human directing and checking the work:
 | Agent loop, tools, policy, streaming, board, CRUD, dashboard | Built and tested |
 | Email ingestion | **Not built.** Items are created in the UI or seeded. Next step: a Gmail/Outlook webhook that calls `createItem` |
 | Sending replies | **Not built.** "Approve & mark sent" records the decision but sends nothing |
-| Auth / multi-tenant | **Not built.** Single-tenant demo, no login |
+| Auth / multi-tenant | **Not built.** Single-tenant demo, no login. Every visitor shares one board and one business profile, so anyone can edit them; Reset demo restores the original |
 | Dashboard history | The Done column is seeded from **28 real agent runs**, captured with `scripts/capture-history.ts`: genuine model steps and drafts, with dates spread over two weeks. New runs add live rows |
 | "Time saved" figure | An **estimate** (6 min per item), labelled as such |
 | Scheduled processing | Built. A Vercel cron job runs once a day (the Hobby plan limit) and processes up to 3 New items. Scheduled runs show a ⏱ on the card and in the timeline, and the last run time is on the dashboard. "Process all New" runs a batch on demand |
@@ -100,7 +102,9 @@ The first live batch sent only **4 of 31** emails to Ready. Reading the routing 
 - there was no category for service work, so bookings and warranty claims scored low;
 - the unknown-sender rule blocked ordinary new-customer enquiries.
 
-The fixes were an editable business profile fed into the prompt, a `service_request` category, and letting new senders through for enquiries, quotes and service requests only. After the fixes, **18 of 42** went to Ready. What still goes to review is what *should*: bank-detail changes, complaints, invoices over $5k, vague or mixed requests, and payments from unknown senders. Safety rules such as "bank details never change by email" are hard-coded, so editing the profile can't remove them.
+The fixes were an editable business profile fed into the prompt, a `service_request` category, and letting new senders through for enquiries, quotes and service requests only. After the fixes, **18 of 42** went to Ready. What still goes to review is what *should*: bank-detail changes, complaints, invoices over $5k, vague or mixed requests, and payments from unknown senders. Safety rules are hard-coded: the bank-details and impersonation checks live in the policy code, so editing the profile can't remove them.
+
+These numbers come from the same synthetic scenarios the prompt was tuned on, so they show the tuning loop working, not generalised accuracy. A held-out labelled set is the next step (see below).
 
 ## 5. Trade-offs and what I'd do next
 - **Calibrate confidence.** The model's self-reported confidence is a weak signal. Next: grow the labelled eval set, run `npm run eval` in CI on prompt or model changes, and tune the threshold against the unsafe-route rate.

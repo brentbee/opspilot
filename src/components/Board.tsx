@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState, type ReactNode } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import {
   DndContext,
   DragOverlay,
@@ -46,6 +46,8 @@ export function Board() {
   const [dragId, setDragId] = useState<string | null>(null);
   const [runs, setRuns] = useState<Record<string, LiveRun>>({});
   const [batch, setBatch] = useState(false);
+  /** Column the dragged card started in (onDragOver moves it between columns as you drag). */
+  const dragOrigin = useRef<Status | null>(null);
 
   const load = useCallback(async () => {
     try {
@@ -60,7 +62,6 @@ export function Board() {
 
   useEffect(() => {
     // Initial load from the API (an external system), then render.
-     
     void load();
     // Deep link from the Customers page: /?item=<id> opens that item.
     const linked = new URLSearchParams(window.location.search).get("item");
@@ -90,7 +91,8 @@ export function Board() {
     async (id: string) => {
       setRuns((r) => ({ ...r, [id]: { steps: [], draft: "", running: true } }));
       setItems((prev) => prev.map((p) => (p.id === id ? { ...p, status: "processing" } : p)));
-      const patch = (fn: (r: LiveRun) => LiveRun) => setRuns((all) => ({ ...all, [id]: fn(all[id]) }));
+      const patch = (fn: (r: LiveRun) => LiveRun) =>
+        setRuns((all) => ({ ...all, [id]: fn(all[id] ?? { steps: [], draft: "", running: true }) }));
       try {
         await streamRun(id, (e) => {
           if (e.type === "step") patch((r) => ({ ...r, steps: [...r.steps, e.step] }));
@@ -132,6 +134,8 @@ export function Board() {
 
   function onDragStart(e: DragStartEvent) {
     setDragId(String(e.active.id));
+    const it = items.find((i) => i.id === String(e.active.id));
+    dragOrigin.current = it ? columnOf(it) : null;
   }
 
   // While dragging across columns, move the card in local state so it previews in place.
@@ -153,14 +157,24 @@ export function Board() {
     if (!target) return void load();
 
     // Work out the card's new index within the target column, then its neighbours.
-    const col = (columns.get(target) ?? []).filter((i) => i.id !== activeId);
+    const full = columns.get(target) ?? [];
+    const col = full.filter((i) => i.id !== activeId);
     let index = col.length;
-    const overIdx = col.findIndex((i) => i.id === String(e.over!.id));
+    const overId = String(e.over.id);
+    const overIdx = col.findIndex((i) => i.id === overId);
     if (overIdx >= 0) {
-      const overRect = e.over.rect;
-      const activeRect = e.active.rect.current.translated;
-      const below = activeRect && activeRect.top > overRect.top + overRect.height / 2;
-      index = overIdx + (below ? 1 : 0);
+      const fromIdx = full.findIndex((i) => i.id === activeId);
+      const toIdx = full.findIndex((i) => i.id === overId);
+      if (dragOrigin.current === target && fromIdx >= 0 && toIdx >= 0) {
+        // Same column: match the sortable preview (arrayMove): moving down lands after the card hovered.
+        index = overIdx + (toIdx > fromIdx ? 1 : 0);
+      } else {
+        // From another column: above or below the hovered card's midpoint.
+        const overRect = e.over.rect;
+        const activeRect = e.active.rect.current.translated;
+        const below = activeRect && activeRect.top > overRect.top + overRect.height / 2;
+        index = overIdx + (below ? 1 : 0);
+      }
     }
     const before = col[index - 1]?.position ?? null;
     const after = col[index]?.position ?? null;

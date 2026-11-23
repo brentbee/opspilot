@@ -12,9 +12,12 @@ export async function processNewItems(limit: number, trigger: "manual" | "schedu
   if (budget <= 0) return { processed: [], skipped: "hourly run limit reached" };
 
   const llm = anthropicLLM();
-  const ids = await repo.claimNewItems(budget);
+  const started = Date.now();
   const processed: { id: string; status: string; ms: number }[] = [];
-  for (const id of ids) {
+  // Claim one item at a time, so nothing is left "processing" if time runs out.
+  while (processed.length < budget && Date.now() - started < 45_000) {
+    const [id] = await repo.claimNewItems(1);
+    if (!id) break;
     const r = await runAgent({ itemId: id, llm, store: repo, emit: () => {}, trigger });
     processed.push({ id, status: r.status, ms: r.ms });
   }

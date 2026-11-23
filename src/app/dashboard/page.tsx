@@ -43,7 +43,7 @@ export default function DashboardPage() {
           hint="the rest were checked by staff"
         />
         <Kpi label="Avg handling time" value={t.avg_agent_ms == null ? "–" : `${(t.avg_agent_ms / 1000).toFixed(1)}s`} hint="per item" />
-        <Kpi label="Cards moved by staff" value={String(t.human_overrides)} hint="changes to the assistant's choice" />
+        <Kpi label="Cards moved by staff" value={String(t.human_overrides)} hint="moved to a different column by staff" />
       </div>
 
       <div className="grid gap-4 md:grid-cols-2">

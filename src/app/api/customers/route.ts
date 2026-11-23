@@ -4,7 +4,6 @@ import { customerCreateSchema } from "@/lib/schemas";
 
 export const dynamic = "force-dynamic";
 
-
 export async function GET() {
   return Response.json(await listCustomers());
 }

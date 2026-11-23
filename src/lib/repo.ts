@@ -12,7 +12,32 @@ const ITEM_COLUMNS = `
   i.created_at, i.updated_at, i.processed_at,
   (select r.trigger from agent_runs r where r.item_id = i.id order by r.started_at desc limit 1) as last_trigger`;
 
+/**
+ * Recovers items left in "processing" by a run that was killed (e.g. a
+ * serverless timeout), so they never get stuck. Called before reads and claims.
+ */
+export async function releaseStale(): Promise<void> {
+  await sql()`
+    update agent_runs set status = 'failed', error = coalesce(error, 'interrupted'), ended_at = now()
+    where status = 'running' and started_at < now() - interval '3 minutes'`;
+  await sql()`
+    update items set status = 'needs_review', updated_at = now(),
+      route_reason = 'Needs review: the assistant was interrupted before it finished.'
+    where status = 'processing' and updated_at < now() - interval '3 minutes'`;
+}
+
+/** Atomically marks one item as processing; false if it is already processing or done. */
+export async function claimItem(id: string): Promise<boolean> {
+  await releaseStale();
+  const rows = await sql()`
+    update items set status = 'processing', updated_at = now()
+    where id = ${id} and status not in ('processing', 'done')
+    returning id`;
+  return rows.length > 0;
+}
+
 export async function listItems(): Promise<Item[]> {
+  await releaseStale();
   return sql().unsafe<Item[]>(
     `select ${ITEM_COLUMNS} from items i left join customers c on c.id = i.customer_id
      order by i.status, i.position, i.created_at`,
@@ -153,7 +178,8 @@ export async function findCustomer(q: CustomerQuery): Promise<Customer | null> {
   }
   for (const term of [q.company, q.name]) {
     if (!term || term.trim().length < 3) continue;
-    const like = `%${term.trim().toLowerCase()}%`;
+    // Escape LIKE wildcards so a crafted name like "%%%" can't match everyone.
+    const like = `%${term.trim().toLowerCase().replace(/[\\%_]/g, (c) => `\\${c}`)}%`;
     const [row] = await sql()<Customer[]>`
       select * from customers
       where lower(company) like ${like} or lower(name) like ${like}
@@ -214,6 +240,7 @@ export async function listSteps(itemId: string): Promise<Step[]> {
 }
 
 export async function claimNewItems(limit: number): Promise<string[]> {
+  await releaseStale();
   const rows = await sql()<{ id: string }[]>`
     update items set status = 'processing', updated_at = now()
     where id in (
