@@ -1,4 +1,5 @@
 import postgres from "postgres";
+import { resolveDatabaseUrl } from "./dburl";
 
 declare global {
   var __opspilotSql: postgres.Sql | undefined;
@@ -11,8 +12,8 @@ declare global {
  */
 export function sql(): postgres.Sql {
   if (!globalThis.__opspilotSql) {
-    const url = process.env.DATABASE_URL;
-    if (!url) throw new Error("DATABASE_URL is not set (see .env.example)");
+    const url = resolveDatabaseUrl();
+    if (!url) throw new Error("DATABASE_URL (or POSTGRES_URL) is not set (see .env.example)");
     globalThis.__opspilotSql = postgres(url, {
       prepare: false,
       max: 5,

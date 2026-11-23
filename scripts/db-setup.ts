@@ -11,14 +11,15 @@ import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import postgres from "postgres";
 import { CUSTOMERS, HISTORY, NEW_ITEMS } from "./seed-data";
+import { resolveDatabaseUrl } from "../src/lib/dburl";
 
 const DAY = 86_400_000;
 
 async function main() {
-  const url = process.env.DATABASE_URL;
+  const url = resolveDatabaseUrl();
   if (!url) {
     // Lets `vercel-build` run in environments without a database (e.g. CI).
-    console.warn("db:setup skipped: DATABASE_URL is not set");
+    console.warn("db:setup skipped: DATABASE_URL / POSTGRES_URL is not set");
     return;
   }
   const reset = process.argv.includes("--reset");

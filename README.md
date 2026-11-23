@@ -113,5 +113,5 @@ Checks: `npm run lint && npm run typecheck && npm test && npm run build`. Eval (
 
 ### Deploy (Vercel + Supabase)
 1. Create a Supabase project. Copy the **Transaction pooler** connection string (port 6543).
-2. Import the repo in Vercel and set the `DATABASE_URL`, `ANTHROPIC_API_KEY` and `CRON_SECRET` env vars.
+2. Import the repo in Vercel and set `ANTHROPIC_API_KEY` and `CRON_SECRET`, plus `DATABASE_URL`. If you connect Supabase through the Vercel integration, it sets `POSTGRES_URL` and the app uses that instead.
 3. Deploy. The `vercel-build` script runs `db:setup` first. It creates the tables idempotently, and seeds the data only if the database is empty.
