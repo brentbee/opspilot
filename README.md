@@ -10,7 +10,7 @@ OpsPilot is an AI agent for small-business operations. A customer enquiry, a sup
 
 Every step streams to the screen as it happens. Anything uncertain or risky lands in **Needs review** for a person, and only a person can mark work **Done**.
 
-**Live demo:** _TBC_  ·  **Stack:** Next.js 16, TypeScript, Tailwind, Postgres (Supabase), Claude API (tool use), Vercel
+**Live demo:** https://opspilot-lyart.vercel.app  ·  **Stack:** Next.js 16, TypeScript, Tailwind, Postgres (Supabase), Claude API (tool use), Vercel
 
 > All data is synthetic. The business ("Harbour & Co", a commercial kitchen equipment supplier) and every customer are invented, and emails use the reserved `.example` domain.
 
